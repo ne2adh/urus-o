@@ -10,9 +10,9 @@ class DashboardController extends Controller
 {
     public function index(Request $request)
     {
-        if (!auth()->check() || !in_array(auth()->user()->rol, ['jefe','superadministrador'], true)) {
+        /* if (!auth()->check() || !in_array(auth()->user()->rol, ['jefe','superadministrador'], true)) {
             return redirect()->route('participantes.create');
-        }
+        } */
 
         $hoy = Carbon::today();
 
@@ -119,6 +119,7 @@ class DashboardController extends Controller
             "Tomás Barrón" => 28,
             "Mejillones" => 10,
             "Sebastián Pagador" => 49,
+            "Otro" => 0
         ];
 
         // Construir dataset metas/actual y cálculo de % global para el donut
