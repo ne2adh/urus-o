@@ -10,9 +10,9 @@ class DashboardController extends Controller
 {
     public function index(Request $request)
     {
-        if (!auth()->check() || !in_array(auth()->user()->rol, ['jefe','superadministrador'], true)) {
+        /* if (!auth()->check() || !in_array(auth()->user()->rol, ['jefe','superadministrador'], true)) {
             return redirect()->route('participantes.create');
-        }
+        } */
 
         $hoy = Carbon::today();
 
@@ -37,7 +37,8 @@ class DashboardController extends Controller
             'Tomás Barrón',
             'Mejillones',
             'Sebastián Pagador',
-            'Atahuallpa'
+            'Atahuallpa',
+            'Otro'
         ];
         $municipios = [
             'Antequera',
@@ -74,7 +75,8 @@ class DashboardController extends Controller
             'Totora',
             'Turco',
             'Soracachi',
-            'Yunguyo de Litoral'
+            'Yunguyo de Litoral',
+            'Otro'
         ];
 
         // Totales por provincia (conteo)

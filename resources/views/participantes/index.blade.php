@@ -190,7 +190,7 @@
                 </div>
 
                 <div class="mt-4">
-                    {{ $participantes->links() }}
+                    {{ $participantes->onEachSide(1)->links() }}
                 </div>
             </div>
         </div>

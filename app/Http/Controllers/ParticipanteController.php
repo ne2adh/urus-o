@@ -46,7 +46,8 @@ class ParticipanteController extends Controller
             'Totora',
             'Turco',
             'Soracachi',
-            'Yunguyo de Litoral'
+            'Yunguyo de Litoral',
+            'Otro'
         ];
 
         \Collator::create('es_BO')->sort($municipiosOruro);
@@ -67,7 +68,8 @@ class ParticipanteController extends Controller
             'Tomás Barrón',
             'Mejillones',
             'Sebastián Pagador',
-            'Atahuallpa'
+            'Atahuallpa',
+            'Otro'
         ];
 
         \Collator::create('es_BO')->sort($provinciasOruro);
