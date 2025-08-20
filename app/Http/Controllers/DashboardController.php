@@ -10,9 +10,9 @@ class DashboardController extends Controller
 {
     public function index(Request $request)
     {
-        /* if (!auth()->check() || !in_array(auth()->user()->rol, ['jefe','superadministrador'], true)) {
+        if (!auth()->check() || !in_array(auth()->user()->rol, ['jefe','superadministrador'], true)) {
             return redirect()->route('participantes.create');
-        } */
+        }
 
         $hoy = Carbon::today();
 
