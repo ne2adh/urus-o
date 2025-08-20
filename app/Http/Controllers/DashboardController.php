@@ -172,6 +172,24 @@ class DashboardController extends Controller
             ->orderByDesc('total_general')
             ->get();
 
+        // Totales por provincia (conteo absoluto)
+        $rawProv = DB::table('participantes')
+            ->select('provincia', DB::raw('COUNT(*) as total'))
+            ->groupBy('provincia')
+            ->pluck('total', 'provincia')
+            ->toArray();
+
+        $provLabels = $provincias; // ya definido en tu controlador
+        $provTotals = [];
+        foreach ($provincias as $p) {
+            $provTotals[] = (int) ($rawProv[$p] ?? 0);
+        }
+
+        // Sugerir tope del eje Y (redondeado)
+        $provMax = !empty($provTotals) ? max($provTotals) : 0;
+        $provSuggested = $provMax > 0 ? (int) (ceil($provMax / 5) * 5) : 10;
+
+
 
         return view('dashboard', [
             'kpis'        => [
@@ -188,6 +206,9 @@ class DashboardController extends Controller
                 return ['provincia' => $p, 'total' => $t];
             }, $provLabels, $provTotals),
             'munTabla'    => $munRows,      // municipio, total
+            'provLabels'   => $provLabels,
+            'provTotals'   => $provTotals,
+            'provSuggested'=> $provSuggested,
         ]);
     }
 }

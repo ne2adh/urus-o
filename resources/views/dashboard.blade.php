@@ -22,16 +22,6 @@
     </div>
 
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {{-- Barras: Totales por PROVINCIA (un total por provincia en eje X) --}}
-        <div class="lg:col-span-full bg-white rounded-xl shadow p-6">
-            <div class="flex items-center justify-between mb-3">
-                <h3 class="text-lg font-semibold">Avance por provincia (%)</h3>
-                <span class="text-xs text-gray-500">0% – 100%</span>
-            </div>
-            <div class="h-72">
-                <canvas id="bars"></canvas>
-            </div>
-        </div>
         {{-- Tablas: Provincias (totales) y Municipios (totales) --}}
         <div class="lg:col-span-3 grid grid-cols-1 lg:grid-cols-2 gap-6">
             {{-- Donut + Metas por provincia --}}
@@ -88,7 +78,7 @@
             <div class="bg-white rounded-xl shadow p-6">
                 <div class="flex items-center justify-between mb-3">
                     <h3 class="text-lg font-semibold">Registros por usuario</h3>
-                    <span class="text-xs text-gray-500">Hoy y acumulado</span>
+                    <span class="text-xs text-gray-500">Hoy ({{ \Carbon\Carbon::now()->format('d/m/Y') }}) y acumulado </span>
                 </div>
 
                 <div class="overflow-x-auto">
@@ -146,35 +136,44 @@
                         </tbody>
                     </table>
                 </div>
-                {{-- Municipios totales --}}
-                <div class="bg-white rounded-xl shadow p-6">
-                    <h3 class="text-lg font-semibold mb-3">Registrados por MUNICIPIO (totales)</h3>
-                    <div class="overflow-x-auto max-h-[520px]">
-                        <table class="min-w-full text-xs sm:text-sm">
-                            <thead class="bg-slate-100">
-                                <tr>
-                                    <th class="px-3 py-2 text-left">Municipio</th>
-                                    <th class="px-3 py-2 text-right">Total</th>
+            </div>
+            {{-- Municipios totales --}}
+            <div class="bg-white rounded-xl shadow p-6">
+                <h3 class="text-lg font-semibold mb-3">Registrados por MUNICIPIO (totales)</h3>
+                <div class="overflow-x-auto max-h-[520px]">
+                    <table class="min-w-full text-xs sm:text-sm">
+                        <thead class="bg-slate-100">
+                            <tr>
+                                <th class="px-3 py-2 text-left">Municipio</th>
+                                <th class="px-3 py-2 text-right">Total</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @forelse($munTabla as $row)
+                                <tr class="border-t">
+                                    <td class="px-3 py-2">{{ $row->municipio ?? '-' }}</td>
+                                    <td class="px-3 py-2 text-right">{{ number_format($row->total ?? 0) }}</td>
                                 </tr>
-                            </thead>
-                            <tbody>
-                                @forelse($munTabla as $row)
-                                    <tr class="border-t">
-                                        <td class="px-3 py-2">{{ $row->municipio ?? '-' }}</td>
-                                        <td class="px-3 py-2 text-right">{{ number_format($row->total ?? 0) }}</td>
-                                    </tr>
-                                @empty
-                                    <tr>
-                                        <td colspan="2" class="px-3 py-6 text-center text-gray-500">Sin datos</td>
-                                    </tr>
-                                @endforelse
-                            </tbody>
-                        </table>
-                    </div>
+                            @empty
+                                <tr>
+                                    <td colspan="2" class="px-3 py-6 text-center text-gray-500">Sin datos</td>
+                                </tr>
+                            @endforelse
+                        </tbody>
+                    </table>
                 </div>
             </div>
         </div>
-
+        {{-- BARRAS: Totales por PROVINCIA (conteo absoluto) --}}
+        <div class="col-span-full bg-white rounded-xl shadow p-6">
+            <div class="flex items-center justify-between mb-3">
+                <h3 class="text-lg font-semibold">Totales por provincia</h3>
+                <span class="text-xs text-gray-500">Acumulado (registros)</span>
+            </div>
+            <div class="h-72">
+                <canvas id="bars"></canvas>
+            </div>
+        </div>
     </div>
 
     <script>
@@ -186,14 +185,15 @@
             const ctx = el.getContext('2d');
 
             const labels = @json($provLabels);
-            const data = @json($provPct); // % 0–100
+            const data = @json($provTotals);
+            const suggestedMax = @json($provSuggested);
 
             new Chart(ctx, {
                 type: 'bar',
                 data: {
                     labels,
                     datasets: [{
-                        label: 'Avance (%)',
+                        label: 'Total registrados',
                         data
                     }]
                 },
@@ -203,10 +203,7 @@
                     scales: {
                         y: {
                             beginAtZero: true,
-                            max: 100,
-                            ticks: {
-                                callback: (v) => v + '%'
-                            }
+                            suggestedMax: suggestedMax
                         }
                     },
                     plugins: {
@@ -215,7 +212,7 @@
                         },
                         tooltip: {
                             callbacks: {
-                                label: (ctx) => ` ${ctx.parsed.y}%`
+                                label: (ctx) => ` ${Number(ctx.parsed.y).toLocaleString()}`
                             }
                         }
                     }
