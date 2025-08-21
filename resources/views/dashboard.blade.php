@@ -6,13 +6,17 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 
     {{-- KPIs --}}
-    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+    <div class="grid grid-cols-1 sm:grid-cols-4 gap-4 mb-6">
         <div class="bg-white rounded-xl shadow p-5">
             <div class="text-lg font-semibold text-blue-500 mb-1">TOTAL META</div>
             <div class="text-3xl font-semibold">6000</div>
         </div>
         <div class="bg-white rounded-xl shadow p-5">
-            <div class="text-lg text-orange-500 mb-1">TOTAL REGISTRADOS DEL DÍA</div>
+            <div class="text-lg font-semibold text-yellow-500 mb-1">TOTAL RESTANTE</div>
+            <div class="text-3xl font-semibold">{{ number_format($kpis['totalGlobal2']) }}</div>
+        </div>
+        <div class="bg-white rounded-xl shadow p-5">
+            <div class="text-lg text-orange-500 mb-1">TOTAL DEL DÍA</div>
             <div class="text-3xl font-semibold">{{ number_format($kpis['totalHoy']) }}</div>
         </div>
         <div class="bg-white rounded-xl shadow p-5">
@@ -26,7 +30,7 @@
         <div class="lg:col-span-3 grid grid-cols-1 lg:grid-cols-2 gap-6">
             {{-- Donut + Metas por provincia --}}
             <div class="bg-white rounded-xl shadow p-6">
-                <h3 class="text-lg font-semibold mb-3">Avance de meta (a la fecha)</h3>
+                <h3 class="text-lg font-semibold mb-3">Avance de meta (a la fecha - {{ \Carbon\Carbon::now()->format('d/m/Y') }})</h3>
                 <div class="flex items-center gap-6">
                     <div class="w-40 h-40">
                         <canvas id="donut"></canvas>
@@ -35,52 +39,30 @@
                         <ul class="text-sm space-y-2">
                             <li class="flex items-center justify-between">
                                 <span class="text-gray-600">Cumplido</span>
-                                <span class="font-semibold">{{ number_format($donut[0], 2) }}%</span>
+                                <span class="font-semibold">
+                                    {{ number_format($cumplidoPct, 2) }}%
+                                    <span
+                                        class="text-xs text-gray-500">({{ number_format($acumulado) }}/{{ number_format($metaTotal) }})</span>
+                                </span>
                             </li>
                             <li class="flex items-center justify-between">
                                 <span class="text-gray-600">Pendiente</span>
-                                <span class="font-semibold">{{ number_format($donut[1], 2) }}%</span>
+                                <span class="font-semibold">
+                                    {{ number_format($pendientePct, 2) }}%
+                                    <span
+                                        class="text-xs text-gray-500">({{ number_format($pendienteAbs) }}/{{ number_format($metaTotal) }})</span>
+                                </span>
                             </li>
                         </ul>
-                    </div>
-                </div>
-
-                <div class="mt-6">
-                    <h4 class="text-sm font-semibold mb-2">Provincias (Meta vs Actual)</h4>
-                    <div class="overflow-x-auto">
-                        <table class="min-w-full text-xs sm:text-sm">
-                            <thead class="bg-slate-100">
-                                <tr>
-                                    <th class="px-3 py-2 text-left">Provincia</th>
-                                    <th class="px-3 py-2 text-right">Meta</th>
-                                    <th class="px-3 py-2 text-right">Actual</th>
-                                    <th class="px-3 py-2 text-right">% Cumpl.</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                @forelse($topProv as $p)
-                                    <tr class="border-t">
-                                        <td class="px-3 py-2">{{ $p['provincia'] }}</td>
-                                        <td class="px-3 py-2 text-right">{{ number_format($p['meta']) }}</td>
-                                        <td class="px-3 py-2 text-right">{{ number_format($p['actual']) }}</td>
-                                        <td class="px-3 py-2 text-right">{{ number_format($p['pct'], 2) }}%</td>
-                                    </tr>
-                                @empty
-                                    <tr>
-                                        <td colspan="4" class="px-3 py-6 text-center text-gray-500">Sin datos</td>
-                                    </tr>
-                                @endforelse
-                            </tbody>
-                        </table>
                     </div>
                 </div>
             </div>
             <div class="bg-white rounded-xl shadow p-6">
                 <div class="flex items-center justify-between mb-3">
                     <h3 class="text-lg font-semibold">Registros por usuario</h3>
-                    <span class="text-xs text-gray-500">Hoy ({{ \Carbon\Carbon::now()->format('d/m/Y') }}) y acumulado </span>
+                    <span class="text-xs text-gray-500">Hoy ({{ \Carbon\Carbon::now()->format('d/m/Y') }}) y acumulado
+                    </span>
                 </div>
-
                 <div class="overflow-x-auto">
                     <table class="min-w-full text-xs sm:text-sm">
                         <thead class="bg-slate-100">
@@ -227,14 +209,19 @@
             if (prev) prev.destroy();
             const ctx = el.getContext('2d');
 
-            const donutData = @json($donut);
+            const dataPct = [@json($cumplidoPct), @json($pendientePct)];
+            const abs = {
+                cumplido: @json($acumulado),
+                pendiente: @json($pendienteAbs),
+                meta: @json($metaTotal)
+            };
 
             new Chart(ctx, {
                 type: 'doughnut',
                 data: {
                     labels: ['Cumplido', 'Pendiente'],
                     datasets: [{
-                        data: donutData
+                        data: dataPct
                     }]
                 },
                 options: {
@@ -242,6 +229,16 @@
                     plugins: {
                         legend: {
                             display: false
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: (context) => {
+                                    const label = context.label || '';
+                                    const valPct = context.parsed;
+                                    const valAbs = label === 'Cumplido' ? abs.cumplido : abs.pendiente;
+                                    return ` ${label}: ${valPct}% (${valAbs.toLocaleString()}/${abs.meta.toLocaleString()})`;
+                                }
+                            }
                         }
                     }
                 }

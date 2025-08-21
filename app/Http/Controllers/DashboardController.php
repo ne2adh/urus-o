@@ -189,11 +189,17 @@ class DashboardController extends Controller
         $provMax = !empty($provTotals) ? max($provTotals) : 0;
         $provSuggested = $provMax > 0 ? (int) (ceil($provMax / 5) * 5) : 10;
 
+        $metaTotal    = 6000;
+        $acumulado    = (int) ($totalGlobal ?? 0);
+        $pendienteAbs = max(0, $metaTotal - $acumulado);
+        $cumplidoPct  = $metaTotal > 0 ? round(($acumulado / $metaTotal) * 100, 2) : 0.0;
+        $pendientePct = max(0, 100 - $cumplidoPct);
 
 
         return view('dashboard', [
             'kpis'        => [
                 'totalGlobal' => $totalGlobal,
+                'totalGlobal2' => (6000 - $totalGlobal),
                 'totalHoy'    => $totalHoy,
             ],
             'provLabels'  => $provLabels,
@@ -209,6 +215,11 @@ class DashboardController extends Controller
             'provLabels'   => $provLabels,
             'provTotals'   => $provTotals,
             'provSuggested'=> $provSuggested,
+            'metaTotal'     => $metaTotal,
+            'acumulado'     => $acumulado,
+            'pendienteAbs'  => $pendienteAbs,
+            'cumplidoPct'   => $cumplidoPct,
+            'pendientePct'  => $pendientePct,
         ]);
     }
 }
