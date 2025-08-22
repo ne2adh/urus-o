@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 use App\Models\Participante;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Auth;
+
 use Carbon\Carbon;
 
 class ParticipanteController extends Controller
@@ -75,25 +77,36 @@ class ParticipanteController extends Controller
         \Collator::create('es_BO')->sort($provinciasOruro);
 
         $q = trim((string)$request->input('q'));
+        $q1 = trim((string)$request->input('q1'));
 
-        $participantes = DB::table('participantes')
-            ->when($q, function ($qry) use ($q) {
-                $qry->where('ci', 'like', "%{$q}%")
-                    ->orWhere('nombre_completo', 'like', "%{$q}%");
-            })
-            ->orderByDesc('id')
-            ->paginate(8)
-            ->withQueryString();
+        $participantes = Participante::with('user')
+        ->when($q1, function ($query) use ($q1) {
+            $query->where('ci', 'like', "%{$q1}%");
+        })
+        ->orderByDesc('id')
+        ->paginate(8)
+        ->withQueryString();
 
-            $uid = auth()->id();
-    $hoy = Carbon::today();
+        $participantes_user = DB::table('participantes')
+        ->where('user_id', Auth::id())
+        ->when($q, function ($qry) use ($q) {
+            $qry->where(function ($sub) use ($q) {
+                $sub->where('ci', 'like', "%{$q}%");
+            });
+        })
+        ->orderByDesc('id')
+        ->paginate(8)
+        ->withQueryString();
 
-    $kpisUser = [
-        'totalDia'       => Participante::where('user_id', $uid)->whereDate('created_at', $hoy)->count(),
-        'totalAcumulado' => Participante::where('user_id', $uid)->count(),
-    ];
+        $uid = auth()->id();
+        $hoy = Carbon::today();
 
-        return view('participantes.index', compact('participantes', 'q','municipiosOruro','provinciasOruro', 'kpisUser'));
+        $kpisUser = [
+            'totalDia'       => Participante::where('user_id', $uid)->whereDate('created_at', $hoy)->count(),
+            'totalAcumulado' => Participante::where('user_id', $uid)->count(),
+        ];
+
+        return view('participantes.index', compact('participantes','participantes_user', 'q1','q','municipiosOruro','provinciasOruro', 'kpisUser'));
     }
 
     public function store(Request $request)

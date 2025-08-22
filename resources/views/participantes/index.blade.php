@@ -94,16 +94,16 @@
                 </form>
             </div>
             {{-- KPIs por usuario --}}
-<div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6 mt-2">
-<div class="bg-white rounded-xl shadow p-5">
-    <div class="text-lg text-blue-500 mb-1">TOTAL DÍA</div>
-    <div class="text-3xl font-semibold">{{ number_format($kpisUser['totalDia']) }}</div>
-</div>
-<div class="bg-white rounded-xl shadow p-5">
-    <div class="text-lg text-blue-500 mb-1">TOTAL ACUMULADO</div>
-    <div class="text-3xl font-semibold">{{ number_format($kpisUser['totalAcumulado']) }}</div>
-</div>
-</div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6 mt-2">
+                <div class="bg-white rounded-xl shadow p-5">
+                    <div class="text-lg text-blue-500 mb-1">TOTAL DÍA</div>
+                    <div class="text-3xl font-semibold">{{ number_format($kpisUser['totalDia']) }}</div>
+                </div>
+                <div class="bg-white rounded-xl shadow p-5">
+                    <div class="text-lg text-blue-500 mb-1">TOTAL ACUMULADO</div>
+                    <div class="text-3xl font-semibold">{{ number_format($kpisUser['totalAcumulado']) }}</div>
+                </div>
+            </div>
         </div>
 
         {{-- DERECHA (2/3 en ≥lg): Listado CRUD --}}
@@ -129,8 +129,6 @@
                             <tr>
                                 <th class="px-3 py-2 text-left">ID</th>
                                 <th class="px-3 py-2 text-left">CI</th>
-                                {{-- <th class="px-3 py-2 text-left">Nombre</th>
-                                <th class="px-3 py-2 text-left">Fecha nac.</th> --}}
                                 <th class="px-3 py-2 text-left">Provincia</th>
                                 <th class="px-3 py-2 text-left">Municipio</th>
                                 <th class="px-3 py-2 text-left">Archivo</th>
@@ -138,14 +136,10 @@
                             </tr>
                         </thead>
                         <tbody>
-                            @forelse($participantes as $p)
+                            @forelse($participantes_user as $p)
                                 <tr class="border-t">
                                     <td class="px-3 py-2">{{ $p->id }}</td>
                                     <td class="px-3 py-2">{{ $p->ci }}</td>
-                                    {{-- <td class="px-3 py-2">{{ $p->nombre_completo }}</td>
-                                    <td class="px-3 py-2">
-                                        {{ $p->fecha_nac ? \Carbon\Carbon::parse($p->fecha_nac)->format('Y-m-d') : '-' }}
-                                    </td> --}}
                                     <td class="px-3 py-2">{{ $p->provincia }}</td>
                                     <td class="px-3 py-2">{{ $p->municipio }}</td>
                                     <td class="px-3 py-2">
@@ -162,7 +156,8 @@
                                         @if (auth()->user()->rol === 'superadministrador')
                                             <td class="px-3 py-2">
                                                 <div class="flex justify-end gap-2">
-                                                    <form action="{{ route('participantes.destroy', $p->id) }}" method="POST"
+                                                    <form action="{{ route('participantes.destroy', $p->id) }}"
+                                                        method="POST"
                                                         onsubmit="return confirm('¿Eliminar participante #{{ $p->id }}?');">
                                                         @csrf @method('DELETE')
                                                         <button
@@ -179,6 +174,69 @@
                                             </td>
                                         @endif
                                     @endauth
+                                </tr>
+                            @empty
+                                <tr>
+                                    <td colspan="5" class="px-3 py-6 text-center text-gray-500">Sin resultados</td>
+                                </tr>
+                            @endforelse
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="mt-4">
+                    {{ $participantes_user->onEachSide(1)->links() }}
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="h-14.5">
+        <div class="lg:col-span-2 order-2 lg:order-2">
+            <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 sm:p-6">
+                <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+                    <h2 class="text-lg sm:text-xl font-semibold">Listado de Participantes de otros usuarios</h2>
+                    <form method="GET" action="{{ route('participantes.index') }}" class="flex items-center gap-2">
+                        <input type="text" name="q1" value="{{ $q1 }}"
+                            placeholder="Buscar por CI o nombre"
+                            class="border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring focus:border-blue-600 w-48 sm:w-64">
+                        <button class="px-4 py-2 text-sm rounded-lg bg-gray-800 text-white hover:bg-black">Buscar</button>
+                        @if ($q1)
+                            <a href="{{ route('participantes.index') }}"
+                                class="px-3 py-2 text-sm rounded-lg border">Limpiar</a>
+                        @endif
+                    </form>
+                </div>
+
+                <div class="-mx-4 sm:mx-0 overflow-x-auto">
+                    <table class="min-w-[640px] sm:min-w-full text-xs sm:text-sm">
+                        <thead class="bg-slate-100">
+                            <tr>
+                                <th class="px-3 py-2 text-left">ID</th>
+                                <th class="px-3 py-2 text-left">CI</th>
+                                <th class="px-3 py-2 text-left">Provincia</th>
+                                <th class="px-3 py-2 text-left">Municipio</th>
+                                <th class="px-3 py-2 text-left">Archivo</th>
+                                <th class="px-3 py-2 text-left">Usuario</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @forelse($participantes as $p)
+                                <tr class="border-t">
+                                    <td class="px-3 py-2">{{ $p->id }}</td>
+                                    <td class="px-3 py-2">{{ $p->ci }}</td>
+                                    <td class="px-3 py-2">{{ $p->provincia }}</td>
+                                    <td class="px-3 py-2">{{ $p->municipio }}</td>
+                                    <td class="px-3 py-2">
+                                        @if (!empty($p->archivo))
+                                            <a href="{{ route('files.show', ['path' => $p->archivo]) }}"
+                                                class="text-blue-600 hover:underline" target="_blank">
+                                                Ver PDF
+                                            </a>
+                                        @else
+                                            <span class="text-gray-400">—</span>
+                                        @endif
+                                    </td>
+                                    <td class="px-3 py-2">{{ $p->user->username ?? '—' }}</td>
                                 </tr>
                             @empty
                                 <tr>
