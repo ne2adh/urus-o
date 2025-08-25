@@ -1,6 +1,7 @@
 <?php
 // app/Http/Controllers/ParticipanteController.php
 namespace App\Http\Controllers;
+use Illuminate\Support\Facades\Storage;
 
 use App\Models\Participante;
 use Illuminate\Http\Request;
@@ -65,16 +66,19 @@ class ParticipanteController extends Controller
             'San Pedro de Totora',
             'Ladislao Cabrera',
             'Poopó',
-            'Eduardo Avaroa',
+            'Abaroa',
             'Pantaleón Dalence',
             'Tomás Barrón',
             'Mejillones',
             'Sebastián Pagador',
-            'Atahuallpa',
+            'Sabaya',
             'Otro'
         ];
 
         \Collator::create('es_BO')->sort($provinciasOruro);
+
+        $uid = auth()->id();
+        $hoy = Carbon::today();
 
         $q = trim((string)$request->input('q'));
         $q1 = trim((string)$request->input('q1'));
@@ -87,26 +91,31 @@ class ParticipanteController extends Controller
         ->paginate(8)
         ->withQueryString();
 
-        $participantes_user = DB::table('participantes')
-        ->where('user_id', Auth::id())
-        ->when($q, function ($qry) use ($q) {
-            $qry->where(function ($sub) use ($q) {
-                $sub->where('ci', 'like', "%{$q}%");
-            });
-        })
+    // Otros usuarios (para reclamar)
+    $otros = Participante::with(['user','claimedBy'])
+        ->where('user_id','<>',$uid)
         ->orderByDesc('id')
-        ->paginate(8)
+        ->paginate(10, ['*'], 'otros_page') // paginación independiente (param otros_page)
         ->withQueryString();
 
-        $uid = auth()->id();
-        $hoy = Carbon::today();
+        $participantes_user = DB::table('participantes')
+            ->where('user_id', Auth::id())
+            ->when($q, function ($qry) use ($q) {
+                $qry->where(function ($sub) use ($q) {
+                    $sub->where('ci', 'like', "%{$q}%");
+                });
+            })
+            ->orderByDesc('id')
+            ->paginate(8)
+            ->withQueryString();
+
 
         $kpisUser = [
             'totalDia'       => Participante::where('user_id', $uid)->whereDate('created_at', $hoy)->count(),
             'totalAcumulado' => Participante::where('user_id', $uid)->count(),
         ];
 
-        return view('participantes.index', compact('participantes','participantes_user', 'q1','q','municipiosOruro','provinciasOruro', 'kpisUser'));
+        return view('participantes.index', compact('participantes','participantes_user', 'q1','q','municipiosOruro','provinciasOruro', 'otros', 'kpisUser'));
     }
 
     public function store(Request $request)
@@ -144,9 +153,18 @@ class ParticipanteController extends Controller
         );
 
         if ($request->hasFile('archivo')) {
-            // guarda en storage/app/public/participantes
-            $path = $request->file('archivo')->store('participantes', 'public');
-            $validated['archivo'] = $path; // guardar ruta relativa
+            $ci = $validated['ci'];
+            $filename = $ci . '.pdf';
+            $path = 'participantes/' . $filename;
+
+            // 🚨 Validación: si ya existe, error
+            if (Storage::disk('public')->exists($path)) {
+                return back()
+                    ->withErrors(['archivo' => 'Ya existe un archivo para este CI ('.$filename.').'])
+                    ->withInput();
+            }
+
+            $validated['archivo'] = $request->file('archivo')->storeAs('participantes', $filename, 'public');
         }
 
         $validated['user_id'] = auth()->id();
@@ -209,12 +227,12 @@ class ParticipanteController extends Controller
             'San Pedro de Totora',
             'Ladislao Cabrera',
             'Poopó',
-            'Eduardo Avaroa',
+            'Abaroa',
             'Pantaleón Dalence',
             'Tomás Barrón',
             'Mejillones',
             'Sebastián Pagador',
-            'Atahuallpa'
+            'Sabaya'
         ];
 
         \Collator::create('es_BO')->sort($provinciasOruro);
@@ -252,12 +270,24 @@ class ParticipanteController extends Controller
             ]
         );
 
+        $oldPath = $participante->archivo;
+        $ci      = $validated['ci'];
+        $newFilename = $ci . '.pdf';
+        $newPath     = 'participantes/'.$newFilename;
+
         if ($request->hasFile('archivo')) {
-            if ($participante->archivo) {
-                Storage::disk('public')->delete($participante->archivo);
+            // reemplazar archivo subido con el nombre {CI}.pdf
+            if ($oldPath && $oldPath !== $newPath) {
+                Storage::disk('public')->delete($oldPath);
             }
-            $path = $request->file('archivo')->store('participantes', 'public');
-            $validated['archivo'] = $path;
+            $stored = $request->file('archivo')->storeAs('participantes', $newFilename, 'public');
+            $validated['archivo'] = $stored; // participantes/{CI}.pdf
+        } else {
+            // no subieron nuevo archivo: si ya había uno y cambió el CI, renombrar
+            if ($oldPath && $oldPath !== $newPath && Storage::disk('public')->exists($oldPath)) {
+                Storage::disk('public')->move($oldPath, $newPath);
+                $validated['archivo'] = $newPath;
+            }
         }
 
         $participante->update($validated);
@@ -269,5 +299,32 @@ class ParticipanteController extends Controller
     {
         $participante->delete();
         return redirect()->back()->with('status', 'Participante eliminado correctamente.');
+    }
+
+    public function claim(Request $request, Participante $participante)
+    {
+        $request->validate([
+            'ci'      => ['required','regex:/^[0-9]{4,12}$/'],
+            'claimer' => ['required','integer'],
+        ]);
+
+        $uid = Auth::id();
+
+        if ($participante->user_id === $uid) {
+            return back()->withErrors(['claim' => 'No puedes reclamar tu propio registro.'])->withInput();
+        }
+        if ($participante->ci !== $request->ci) {
+            return back()->withErrors(['claim' => 'El CI no coincide con el registro.'])->withInput();
+        }
+        if (!is_null($participante->claimed_by_user_id)) {
+            return back()->withErrors(['claim' => 'Este registro ya fue reclamado.'])->withInput();
+        }
+
+        $participante->update([
+            'claimed_by_user_id' => $uid,
+            'claimed_at'         => now(),
+        ]);
+
+        return back()->with('status','Registro reclamado correctamente.');
     }
 }

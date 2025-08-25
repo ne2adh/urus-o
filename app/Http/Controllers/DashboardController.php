@@ -32,12 +32,12 @@ class DashboardController extends Controller
             'San Pedro de Totora',
             'Ladislao Cabrera',
             'Poopó',
-            'Eduardo Avaroa',
+            'Abaroa',
             'Pantaleón Dalence',
             'Tomás Barrón',
             'Mejillones',
             'Sebastián Pagador',
-            'Atahuallpa',
+            'Sabaya',
             'Otro'
         ];
         $municipios = [
@@ -111,10 +111,10 @@ class DashboardController extends Controller
             "Carangas" => 60,
             "Saucari" => 32,
             "San Pedro de Totora" => 27,
-            "Atahuallpa" => 55,
+            "Sabaya" => 55,
             "Ladislao Cabrera" => 64,
             "Poopó" => 89,
-            "Eduardo Avaroa" => 224,
+            "Abaroa" => 224,
             "Pantaleón Dalence" => 173,
             "Tomás Barrón" => 28,
             "Mejillones" => 10,
@@ -195,11 +195,80 @@ class DashboardController extends Controller
         $cumplidoPct  = $metaTotal > 0 ? round(($acumulado / $metaTotal) * 100, 2) : 0.0;
         $pendientePct = max(0, 100 - $cumplidoPct);
 
+        $provMap = [
+            "Abaroa"            => ["alias"=>"Abaroa","habilitado"=>22309,"requerido"=>224],
+            "Carangas"          => ["alias"=>"Carangas","habilitado"=>5925,"requerido"=>60],
+            "Cercado"           => ["alias"=>"Cercado","habilitado"=>268352,"requerido"=>4708],
+            "Ladislao Cabrera"  => ["alias"=>"Ladislao Cabrera","habilitado"=>6375,"requerido"=>64],
+            "Litoral"           => ["alias"=>"Litoral","habilitado"=>3429,"requerido"=>35],
+            "Mejillones"        => ["alias"=>"Mejillones","habilitado"=>873,"requerido"=>10],
+            "Nor Carangas"      => ["alias"=>"Nor Carangas","habilitado"=>2880,"requerido"=>29],
+            "Pantaleón Dalence" => ["alias"=>"Pantaleón Dalence","habilitado"=>17279,"requerido"=>173],
+            "Poopó"             => ["alias"=>"Poopó","habilitado"=>8867,"requerido"=>89],
+            "Sabaya"            => ["alias"=>"Sabaya","habilitado"=>5426,"requerido"=>55],
+            "Sajama"            => ["alias"=>"Sajama","habilitado"=>4928,"requerido"=>50],
+            "San Pedro de Totora" => ["alias"=>"San Pedro de Totora","habilitado"=>2637,"requerido"=>27],
+            "Saucari"           => ["alias"=>"Saucari","habilitado"=>3182,"requerido"=>32],
+            "Sebastián Pagador" => ["alias"=>"Sebastián Pagador","habilitado"=>4883,"requerido"=>49],
+            "Sur Carangas"      => ["alias"=>"Sur Carangas","habilitado"=>3111,"requerido"=>32],
+            "Tomás Barrón"      => ["alias"=>"Tomás Barrón","habilitado"=>2769,"requerido"=>28],
+            "Otro"              => ["alias"=>"Otro","habilitado"=>0,"requerido"=>0],
+        ];
+
+        // Conteos de registrados
+        $regProv = DB::table('participantes')
+            ->select('provincia', DB::raw('COUNT(*) as t'))
+            ->groupBy('provincia')
+            ->pluck('t','provincia')
+            ->toArray();
+
+        $tablaExcel = [];
+        $totHab = $totReq = $totReg = $totRes = 0;
+
+        foreach ($provMap as $prov => $info) {
+            $hab = $info['habilitado'];
+            $req = $info['requerido'];
+            $reg = (int)($regProv[$prov] ?? 0);
+            $res = max(0,$req - $reg);
+
+            $tablaExcel[] = [
+                'provincia'  => $prov,
+                'habilitado'=> $hab,
+                'requerido' => $req,
+                'registrado'=> $reg,
+                'restante'  => $res,
+                'pend_pct'  => $req>0 ? round(($res/$req)*100,2) : 0,
+            ];
+
+            $totHab += $hab; $totReq += $req; $totReg += $reg; $totRes += $res;
+        }
+
+        $totalesExcel = [
+            'habilitado'=>$totHab,
+            'requerido'=>$totReq,
+            'registrado'=>$totReg,
+            'restante'=>$totRes,
+        ];
+
+        // dataset para gráficas de torta por provincia
+        $piesExcel = [];
+        foreach ($tablaExcel as $r) {
+            $piesExcel[] = [
+                'provincia'   => $r['provincia'],
+                'registrado'  => $r['registrado'],
+                'pendiente'   => max(0, $r['requerido'] - $r['registrado']),
+                'requerido'   => $r['requerido'],
+            ];
+        }
+
+        $totalOtro   = (int) DB::table('participantes')->where('provincia','Otro')->count();
+        $totalValido = $totalGlobal - $totalOtro;
 
         return view('dashboard', [
             'kpis'        => [
                 'totalGlobal' => $totalGlobal,
                 'totalGlobal2' => (6000 - $totalGlobal),
+                'totalValido' => $totalValido,
                 'totalHoy'    => $totalHoy,
             ],
             'provLabels'  => $provLabels,
@@ -220,6 +289,9 @@ class DashboardController extends Controller
             'pendienteAbs'  => $pendienteAbs,
             'cumplidoPct'   => $cumplidoPct,
             'pendientePct'  => $pendientePct,
+            'tablaExcel'   => $tablaExcel,
+            'totalesExcel' => $totalesExcel,
+            'piesExcel'    => $piesExcel,
         ]);
     }
 }

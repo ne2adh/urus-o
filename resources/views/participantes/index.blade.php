@@ -127,7 +127,6 @@
                     <table class="min-w-[640px] sm:min-w-full text-xs sm:text-sm">
                         <thead class="bg-slate-100">
                             <tr>
-                                <th class="px-3 py-2 text-left">ID</th>
                                 <th class="px-3 py-2 text-left">CI</th>
                                 <th class="px-3 py-2 text-left">Provincia</th>
                                 <th class="px-3 py-2 text-left">Municipio</th>
@@ -138,7 +137,6 @@
                         <tbody>
                             @forelse($participantes_user as $p)
                                 <tr class="border-t">
-                                    <td class="px-3 py-2">{{ $p->id }}</td>
                                     <td class="px-3 py-2">{{ $p->ci }}</td>
                                     <td class="px-3 py-2">{{ $p->provincia }}</td>
                                     <td class="px-3 py-2">{{ $p->municipio }}</td>
@@ -211,18 +209,17 @@
                     <table class="min-w-[640px] sm:min-w-full text-xs sm:text-sm">
                         <thead class="bg-slate-100">
                             <tr>
-                                <th class="px-3 py-2 text-left">ID</th>
                                 <th class="px-3 py-2 text-left">CI</th>
                                 <th class="px-3 py-2 text-left">Provincia</th>
                                 <th class="px-3 py-2 text-left">Municipio</th>
                                 <th class="px-3 py-2 text-left">Archivo</th>
                                 <th class="px-3 py-2 text-left">Usuario</th>
+                                <th class="px-3 py-2 text-right">Acción</th> {{-- NUEVA COLUMNA --}}
                             </tr>
                         </thead>
                         <tbody>
                             @forelse($participantes as $p)
                                 <tr class="border-t">
-                                    <td class="px-3 py-2">{{ $p->id }}</td>
                                     <td class="px-3 py-2">{{ $p->ci }}</td>
                                     <td class="px-3 py-2">{{ $p->provincia }}</td>
                                     <td class="px-3 py-2">{{ $p->municipio }}</td>
@@ -237,10 +234,28 @@
                                         @endif
                                     </td>
                                     <td class="px-3 py-2">{{ $p->user->username ?? '—' }}</td>
+                                    <td class="px-3 py-2 text-right">
+                                        @if ($p->claimed_by_user_id)
+                                            <span class="text-green-600 font-semibold">
+                                                Reclamado por: {{ optional($p->claimedBy)->username ?? '—' }}
+                                            </span>
+                                        @else
+                                            <form action="{{ route('participantes.claim', $p) }}" method="POST"
+                                                onsubmit="return confirm('¿Reclamar el registro con CI {{ $p->ci }}?');">
+                                                @csrf
+                                                <input type="hidden" name="ci" value="{{ $p->ci }}">
+                                                <input type="hidden" name="claimer" value="{{ auth()->id() }}">
+                                                <button type="submit"
+                                                    class="px-3 py-1 rounded bg-blue-600 text-white hover:bg-blue-700">
+                                                    Reclamar Registro
+                                                </button>
+                                            </form>
+                                        @endif
+                                    </td>
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="5" class="px-3 py-6 text-center text-gray-500">Sin resultados</td>
+                                    <td colspan="7" class="px-3 py-6 text-center text-gray-500">Sin resultados</td>
                                 </tr>
                             @endforelse
                         </tbody>

@@ -55,6 +55,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/participantes/{participante}/edit', [\App\Http\Controllers\ParticipanteController::class, 'edit'])->name('participantes.edit');
     Route::put('/participantes/{participante}', [\App\Http\Controllers\ParticipanteController::class, 'update'])->name('participantes.update');
     Route::delete('/participantes/{participante}', [\App\Http\Controllers\ParticipanteController::class, 'destroy'])->name('participantes.destroy');
+    Route::post('participantes/{participante}/claim', [ParticipanteController::class, 'claim'])->name('participantes.claim');
 });
 
 // Fallback

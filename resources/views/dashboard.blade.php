@@ -6,7 +6,7 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 
     {{-- KPIs --}}
-    <div class="grid grid-cols-1 sm:grid-cols-4 gap-4 mb-6">
+    <div class="grid grid-cols-1 sm:grid-cols-5 gap-4 mb-6">
         <div class="bg-white rounded-xl shadow p-5">
             <div class="text-lg font-semibold text-blue-500 mb-1">TOTAL META</div>
             <div class="text-3xl font-semibold">6000</div>
@@ -23,14 +23,60 @@
             <div class="text-lg text-red-500 mb-1">TOTAL ACUMULADO</div>
             <div class="text-3xl font-semibold text-green-400">{{ number_format($kpis['totalGlobal']) }}</div>
         </div>
+        <div class="bg-white rounded-xl shadow p-5">
+            <div class="text-lg text-blue-500 mb-1">TOTAL VALIDOS</div>
+            <div class="text-3xl font-semibold text-blue-400">{{ number_format($kpis['totalValido']) }}</div>
+        </div>
+    </div>
+    {{-- TORTAS POR PROVINCIA (reemplaza el bloque de tarjetas anterior por este) --}}
+    <div class="col-span-full bg-white rounded-xl shadow p-6 mt-6">
+        <h3 class="text-lg font-semibold mb-4">Avance por provincia (Requerido vs Registrado)</h3>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6">
+            @foreach ($piesExcel as $p)
+                @php
+                    $req = (int) $p['requerido'];
+                    $reg = (int) $p['registrado'];
+                    $rest = (int) $p['pendiente'];
+                    $regPct = $req > 0 ? round(($reg / $req) * 100) : 0;
+                    $restPct = max(0, 100 - $regPct);
+                    $slug = \Illuminate\Support\Str::slug($p['provincia'], '-');
+                @endphp
+
+                <div class="bg-slate-50 rounded-xl p-4 shadow-sm flex flex-col items-center">
+                    <h4 class="font-semibold mb-2 text-center">{{ strtoupper($p['provincia']) }}</h4>
+
+                    <div class="w-40 h-40">
+                        <canvas id="pie-{{ $slug }}"></canvas>
+                    </div>
+
+                    <div class="mt-3 text-xs text-gray-700 space-y-1 text-center">
+                        <div>Requerido: <span class="font-semibold">{{ number_format($req) }}</span></div>
+                        <div class="flex items-center justify-center gap-2">
+                            <span class="inline-block w-3 h-3 rounded-full bg-green-600"></span>
+                            Registrado:
+                            <span class="font-semibold">{{ number_format($reg) }}</span>
+                            <span class="text-gray-500">({{ $regPct }}%)</span>
+                        </div>
+                        <div class="flex items-center justify-center gap-2">
+                            <span class="inline-block w-3 h-3 rounded-full bg-red-600"></span>
+                            Restante:
+                            <span class="font-semibold">{{ number_format($rest) }}</span>
+                            <span class="text-gray-500">({{ $restPct }}%)</span>
+                        </div>
+                    </div>
+                </div>
+            @endforeach
+        </div>
     </div>
 
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-3">
         {{-- Tablas: Provincias (totales) y Municipios (totales) --}}
         <div class="lg:col-span-3 grid grid-cols-1 lg:grid-cols-2 gap-6">
             {{-- Donut + Metas por provincia --}}
             <div class="bg-white rounded-xl shadow p-6">
-                <h3 class="text-lg font-semibold mb-3">Avance de meta (a la fecha - {{ \Carbon\Carbon::now()->format('d/m/Y') }})</h3>
+                <h3 class="text-lg font-semibold mb-3">Avance de meta (a la fecha -
+                    {{ \Carbon\Carbon::now()->format('d/m/Y') }})</h3>
                 <div class="flex items-center gap-6">
                     <div class="w-40 h-40">
                         <canvas id="donut"></canvas>
@@ -89,6 +135,51 @@
                     </table>
                 </div>
             </div>
+        </div>
+        {{-- Inyecta el plugin (una sola vez en la vista) --}}
+        <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
+        {{-- NUEVA TABLA ESTILO EXCEL --}}
+        <div class="col-span-full bg-white rounded-xl shadow p-6 mt-3">
+            <h3 class="text-lg font-semibold mb-4">Metas por Provincia</h3>
+            <div class="overflow-x-auto">
+                <table class="min-w-full text-xs sm:text-sm">
+                    <thead class="bg-slate-100">
+                        <tr>
+                            <th class="px-3 py-2 text-left">PROVINCIA</th>
+                            <th class="px-3 py-2 text-right">HABILITADO</th>
+                            <th class="px-3 py-2 text-right">REQUERIDO</th>
+                            <th class="px-3 py-2 text-right">REGISTRADO</th>
+                            <th class="px-3 py-2 text-right">RESTANTE</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach ($tablaExcel as $r)
+                            <tr class="border-t">
+                                <td class="px-3 py-2">{{ $r['provincia'] }}</td>
+                                <td class="px-3 py-2 text-right">{{ number_format($r['habilitado']) }}</td>
+                                <td class="px-3 py-2 text-right">{{ number_format($r['requerido']) }}</td>
+                                <td class="px-3 py-2 text-right">{{ number_format($r['registrado']) }}</td>
+                                <td class="px-3 py-2 text-right">
+                                    <span class="px-2 py-0.5 rounded text-black bg-green-200">
+                                        {{ number_format($r['restante']) }}
+                                    </span>
+                                </td>
+                            </tr>
+                        @endforeach
+                    </tbody>
+                    <tfoot class="bg-slate-50">
+                        <tr class="font-semibold border-t">
+                            <td class="px-3 py-2">TOTALES</td>
+                            <td class="px-3 py-2 text-right">{{ number_format($totalesExcel['habilitado']) }}</td>
+                            <td class="px-3 py-2 text-right">{{ number_format($totalesExcel['requerido']) }}</td>
+                            <td class="px-3 py-2 text-right">{{ number_format($totalesExcel['registrado']) }}</td>
+                            <td class="px-3 py-2 text-right">{{ number_format($totalesExcel['restante']) }}</td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+        <div class="col-span-full bg-white rounded-xl shadow p-6 mt-6 grid grid-cols-2 lg:grid-cols-2 gap-6">
             {{-- Provincias totales --}}
             <div class="bg-white rounded-xl shadow p-6">
                 <h3 class="text-lg font-semibold mb-3">Registrados por PROVINCIA (totales)</h3>
@@ -158,6 +249,64 @@
         </div>
     </div>
 
+    {{-- scripts --}}
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            @foreach ($piesExcel as $p)
+                (function() {
+                    const id = 'pie-{{ \Illuminate\Support\Str::slug($p['provincia'], '-') }}';
+                    const el = document.getElementById(id);
+                    if (!el) return;
+                    const prev = Chart.getChart(el);
+                    if (prev) prev.destroy();
+
+                    new Chart(el, {
+                        type: 'pie',
+                        data: {
+                            labels: ['Registrado', 'Restante'],
+                            datasets: [{
+                                data: [{{ (int) $p['registrado'] }},
+                                    {{ (int) $p['pendiente'] }}],
+                                backgroundColor: ['#16a34a', '#dc2626'],
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            plugins: {
+                                legend: {
+                                    display: false
+                                },
+                                tooltip: {
+                                    callbacks: {
+                                        label: (ctx) => {
+                                            const total = {{ (int) $p['requerido'] }};
+                                            const val = ctx.parsed || 0;
+                                            const pct = total > 0 ? Math.round((val / total) *
+                                                100) + '%' : '0%';
+                                            return ` ${ctx.label}: ${val.toLocaleString()} (${pct})`;
+                                        }
+                                    }
+                                },
+                                datalabels: {
+                                    color: '#fff',
+                                    font: {
+                                        weight: 'bold'
+                                    },
+                                    formatter: (value, ctx) => {
+                                        const total = {{ (int) $p['requerido'] }};
+                                        const pct = total > 0 ? Math.round((value / total) * 100) :
+                                            0;
+                                        return pct ? pct + '%' : '';
+                                    }
+                                }
+                            }
+                        },
+                        plugins: [ChartDataLabels]
+                    });
+                })();
+            @endforeach
+        });
+    </script>
     <script>
         // ===== BARRAS: Totales por provincia =====
         (function initBars() {
