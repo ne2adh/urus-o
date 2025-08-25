@@ -103,23 +103,23 @@ class DashboardController extends Controller
         // ===== META por provincia (TEMP: random para demo) =====
         // Puedes reemplazar este bloque con lecturas reales desde una tabla metas_provincias
         $provMetas = [
-            "Cercado" => 2683,
-            "Sajama" => 50,
-            "Sur Carangas" => 32,
-            "Litoral" => 35,
-            "Nor Carangas" => 29,
-            "Carangas" => 60,
-            "Saucari" => 32,
+            "Cercado"             => 2683,
+            "Sajama"              => 50,
+            "Sur Carangas"        => 32,
+            "Litoral"             => 35,
+            "Nor Carangas"        => 29,
+            "Carangas"            => 60,
+            "Saucari"             => 32,
             "San Pedro de Totora" => 27,
-            "Sabaya" => 55,
-            "Ladislao Cabrera" => 64,
-            "Poopó" => 89,
-            "Abaroa" => 224,
-            "Pantaleón Dalence" => 173,
-            "Tomás Barrón" => 28,
-            "Mejillones" => 10,
-            "Sebastián Pagador" => 49,
-            "Otro" => 0
+            "Sabaya"              => 55,
+            "Ladislao Cabrera"    => 64,
+            "Poopó"               => 89,
+            "Abaroa"              => 224,
+            "Pantaleón Dalence"   => 173,
+            "Tomás Barrón"        => 28,
+            "Mejillones"          => 10,
+            "Sebastián Pagador"   => 49,
+            "Otro"                => 0
         ];
 
         // Construir dataset metas/actual y cálculo de % global para el donut
