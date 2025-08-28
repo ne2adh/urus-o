@@ -264,6 +264,42 @@ class DashboardController extends Controller
         $totalOtro   = (int) DB::table('participantes')->where('provincia','Otro')->count();
         $totalValido = $totalGlobal - $totalOtro;
 
+        $end = \Carbon\Carbon::today();
+        $start = (clone $end)->subDays(10); // últimos 14 días
+
+        $dates = collect(\Carbon\CarbonPeriod::create($start, $end))
+            ->map(fn($d) => $d->format('Y-m-d'))
+            ->values()
+            ->all();
+
+        $rowsRaw = DB::table('participantes as p')
+            ->join('users as u', 'u.id', '=', 'p.user_id')
+            ->selectRaw('u.id as user_id, u.nombre_completo as usuario, DATE(p.created_at) as dia, COUNT(*) as total')
+            ->whereBetween('p.created_at', [$start->startOfDay(), $end->endOfDay()])
+            ->groupBy('u.id', 'u.nombre_completo', DB::raw('DATE(p.created_at)'))
+            ->orderBy(DB::raw('p.user_id'))
+            ->get();
+
+        $byUser = [];
+        foreach ($rowsRaw as $r) {
+            $uid = (int) $r->user_id;
+            if (!isset($byUser[$uid])) {
+                $byUser[$uid] = ['usuario' => $r->usuario, 'map' => []];
+            }
+            $byUser[$uid]['map'][$r->dia] = (int) $r->total;
+        }
+
+        $rows = [];
+        $chartSeries = [];
+        foreach ($byUser as $u) {
+            $counts = [];
+            foreach ($dates as $d) {
+                $counts[] = $u['map'][$d] ?? 0;
+            }
+            $rows[] = ['usuario' => $u['usuario'], 'counts' => $counts];
+            $chartSeries[] = ['label' => $u['usuario'], 'data' => $counts];
+        }
+
         return view('dashboard', [
             'kpis'        => [
                 'totalGlobal' => $totalGlobal,
@@ -292,6 +328,9 @@ class DashboardController extends Controller
             'tablaExcel'   => $tablaExcel,
             'totalesExcel' => $totalesExcel,
             'piesExcel'    => $piesExcel,
+            'dashboard_reg_dates' => $dates,
+            'dashboard_reg_rows' => $rows,
+            'dashboard_reg_series' => $chartSeries,
         ]);
     }
 }
