@@ -263,7 +263,7 @@
     <div class="bg-white rounded-xl shadow p-6 mb-6">
         <div class="flex items-center justify-between mb-3">
             <h3 class="text-lg font-semibold">Registros por usuario y día</h3>
-            <span class="text-xs text-gray-500">Últimos 14 días</span>
+            <span class="text-xs text-gray-500">Últimos 19 días</span>
         </div>
 
         {{-- Tabla --}}

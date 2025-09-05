@@ -265,7 +265,7 @@ class DashboardController extends Controller
         $totalValido = $totalGlobal - $totalOtro;
 
         $end = \Carbon\Carbon::today();
-        $start = (clone $end)->subDays(10); // últimos 14 días
+        $start = (clone $end)->subDays(19); // últimos 14 días
 
         $dates = collect(\Carbon\CarbonPeriod::create($start, $end))
             ->map(fn($d) => $d->format('Y-m-d'))
